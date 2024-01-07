@@ -1,0 +1,353 @@
+1.aidl file
+[->IRemoteService.aidl]
+
+//IRemoteService.aidl 
+package com.skytoby.server;
+
+interface IRemoteService { 
+    void addPhone(String name); 
+    boolean getPhone(String name); 
+    int getPid(); 
+}
+
+=========================================================================================================================================================================
+
+2. Server
+[->PhoneService.java]
+
+package com.skytoby.server;
+
+import android.app.Service; 
+import android.content.Intent; 
+import android.os.IBinder; 
+import android.os.RemoteException; 
+import android.util.Log; 
+import java.util.ArrayList; 
+import java.util.List;
+
+public class PhoneService extends Service {
+
+    List<String> phones = new ArrayList<>();    
+	//Implement binder interface     
+	private IRemoteService.Stub mBinder = new IRemoteService.Stub() {
+		@Override         
+		public void addPhone(String name) throws RemoteException { 
+		Log.d("phone binder ","server add phone:"+name);            
+		phones.add(name);         
+		}
+    
+        @Override 
+        public boolean getPhone(String name) throws RemoteException { 
+            Log.d("phone binder","server get phone:"+name); 
+            if(phones.contains(name)){ 
+                return true; 
+            } 
+            return false; 
+        }
+
+        @Override 
+        public int getPid() throws RemoteException { 
+            Log.d("phone binder","server getPid "+android.os.Process.myPid()); 
+            return android.os.Process.myPid(); 
+        }
+
+        @Override 
+        public void linkToDeath(IBinder.DeathRecipient recipient, int flags) { 
+            super.linkToDeath(recipient, flags); 
+            Log.d("phone binder","server getPid linkToDeath");
+
+        } 
+    }; 
+    @Override 
+    public void onCreate() { 
+        Log.d("phone binder","server onCreate"); 
+        super.onCreate(); 
+    }
+
+    @Override 
+    public IBinder onBind(Intent intent) { 
+        Log.d("phone binder","server onBind"); 
+        return mBinder; 
+    }
+
+    @Override 
+    public boolean onUnbind(Intent intent) { 
+        Log.d("phone binder","server onUnbind"); 
+        return super.onUnbind(intent); 
+    }
+
+    @Override 
+    public void onDestroy() { 
+        Log.d("phone binder","server onDestroy"); 
+        super.onDestroy(); 
+    } 
+}
+
+
+===========================================================================================================================================================
+
+
+3.Client
+[->MainActivity.java]
+
+
+package com.skytoby.client;
+
+import android.content.ComponentName; 
+import android.content.Context; 
+import android.content.Intent; 
+import android.content.ServiceConnection; 
+import android.os.Bundle; 
+import android.os.IBinder; 
+import android.os.RemoteException; 
+import android.support.design.widget.BottomNavigationView; 
+import android.support.v7.app.AppCompatActivity; 
+import android.support.annotation.NonNull; 
+import android.util.Log; 
+import android.view.MenuItem; 
+import android.widget.TextView ; 
+import com.skytoby.server.IRemoteService;
+
+public class MainActivity extends AppCompatActivity { 
+    private TextView mTextMessage; 
+    private IRemoteService mService; 
+    private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener 
+            = new BottomNavigationView.OnNavigationItemSelectedListener() {
+
+        @Override 
+        public boolean onNavigationItemSelected(@NonNull MenuItem item) { 
+            switch (item.getItemId()) { 
+                case R.id.navigation_home: 
+                    mTextMessage.setText(R.string.title_home); 
+                    bindService(); 
+                    return true; 
+                case R.id .navigation_dashboard: 
+                    mTextMessage.setText(R.string.title_dashboard); 
+                    unbindService(); 
+                    return true; 
+                case R.id.navigation_notifications: 
+                    mTextMessage.setText(R.string.title_notifications); 
+                    killService(); 
+                    return true; 
+            } 
+            return false; 
+        } 
+    };
+
+    @Override 
+    protected void onCreate(Bundle savedInstanceState) { 
+        super.onCreate(savedInstanceState); 
+        setContentView(R.layout.activity_main); 
+        BottomNavigationView navView = findViewById(R.id.nav_view); 
+        mTextMessage = findViewById(R.id.message); 
+        navView .setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener); 
+        Log.d("phone binder","onCreate");
+
+    }
+
+    void bindService(){ 
+        Intent intent = new Intent(); 
+        intent.setComponent(new ComponentName("com.skytoby.server","com.skytoby.server.PhoneService")); 
+        bindService(intent, connection, Context.BIND_AUTO_CREATE) ; 
+    }
+
+    void unbindService(){ 
+        if(mService!=null){ 
+            unbindService(connection); 
+        } 
+    }
+
+    void killService(){ 
+        try { 
+            if(mService!=null){ 
+                android.os.Process.killProcess(mService.getPid()); 
+            } 
+        } catch (RemoteException e) { 
+            e.printStackTrace(); 
+        } 
+    }
+
+    ServiceConnection connection = new ServiceConnection() { 
+        @Override 
+        public void onServiceConnected(ComponentName name, IBinder service) { 
+            Log.d("phone binder","onServiceConnected"); 
+            try { 
+                //Get the proxy 
+                mService = IRemoteService.Stub.asInterface(service ); 
+                Log.d("phone binder","client getphone:"+mService.getPhone("apple")); 
+                mService.addPhone("apple"); 
+                Log.d("phone binder","client getphone:" +mService.getPhone("apple")); 
+            } catch (RemoteException e) { 
+                e.printStackTrace(); 
+            } 
+        }
+
+        @Override 
+        public void onServiceDisconnected(ComponentName name) { 
+            Log.d("binder","onServiceDisconnected"); 
+            mService = null; 
+        } 
+    };
+
+}
+
+
+==================================================================================================================================================================
+IRemoteService.aidl - autogenerated
+
+/* 
+* This file is auto-generated. DO NOT MODIFY. 
+* Original file: G:\\Android studio\\Aidl\\client\\src\\main\\aidl\\com\\skytoby\\server\\ IRemoteService.aidl 
+*/ 
+package com.skytoby.server;
+
+public interface IRemoteService extends android.os.IInterface { 
+    /** 
+     * Local-side IPC implementation stub class. 
+     */ 
+    public static abstract class Stub extends android.os.Binder implements com.skytoby.server.IRemoteService { 
+        private static final java.lang .String DESCRIPTOR = "com.skytoby.server.IRemoteService";
+
+        /** 
+         * Construct the stub at attach it to the interface. 
+         */ 
+        public Stub() { 
+            this.attachInterface(this, DESCRIPTOR); 
+        }
+
+        /** 
+         * Cast an IBinder object into an com.skytoby.server.IRemoteService interface, 
+         * generating a proxy if needed. 
+         */ 
+        public static com.skytoby.server.IRemoteService asInterface(android.os.IBinder obj) { 
+            if (( obj == null)) { 
+                return null; 
+            } 
+            android.os.IInterface iin = obj.queryLocalInterface(DESCRIPTOR); 
+            if (((iin != null) && (iin instanceof com.skytoby.server.IRemoteService))) { 
+                return ((com.skytoby.server.IRemoteService) iin); 
+            } 
+            return new com.skytoby.server.IRemoteService.Stub.Proxy(obj); 
+        }
+
+        @Override 
+        public android.os.IBinder asBinder() { 
+            return this; 
+        }
+
+        @Override 
+        public boolean onTransact(int code, android.os.Parcel data, android.os.Parcel reply, int flags) throws android.os.RemoteException { 
+            java.lang.String descriptor = DESCRIPTOR; 
+            switch (code) { 
+                case INTERFACE_TRANSACTION: { 
+                    reply.writeString(descriptor); 
+                    return true; 
+                } 
+                case TRANSACTION_addPhone: { 
+                    data.enforceInterface(descriptor); 
+                    java.lang.String _arg0; 
+                    _arg0 = data.readString(); 
+                    this.addPhone(_arg0); 
+                    reply.writeNoException() ; 
+                    return true; 
+                } 
+                case TRANSACTION_getPhone: { 
+                    data.enforceInterface(descriptor); 
+                    java.lang.String _arg0; 
+                    _arg0 = data.readString(); 
+                    boolean _result = this.getPhone(_arg0); 
+                    reply.writeNoException(); 
+                    reply.writeInt (((_result) ? (1) : (0))); 
+                    return true; 
+                } 
+                case TRANSACTION_getPid: { 
+                    data.enforceInterface(descriptor); 
+                    int _result = this.getPid(); 
+                    reply.writeNoException(); 
+                    reply.writeInt( _result); 
+                    return true; 
+                } 
+                default: { 
+                    return super.onTransact(code, data, reply, flags); 
+                } 
+            } 
+        }
+
+        private static class Proxy implements com.skytoby.server.IRemoteService { 
+            private android.os.IBinder mRemote;
+
+            Proxy(android.os.IBinder remote) { 
+                mRemote = remote; 
+            }
+
+            @Override 
+            public android.os.IBinder asBinder() { 
+                return mRemote; 
+            }
+
+            public java.lang.String getInterfaceDescriptor() { 
+                return DESCRIPTOR; 
+            }
+
+            @Override 
+            public void addPhone(java.lang.String name) throws android.os.RemoteException { 
+                android.os.Parcel _data = android.os.Parcel.obtain(); 
+                android.os.Parcel _reply = android.os.Parcel. obtain(); 
+                try { 
+                    _data.writeInterfaceToken(DESCRIPTOR); 
+                    _data.writeString(name); 
+                    mRemote.transact(Stub.TRANSACTION_addPhone, _data, _reply, 0); 
+                    _reply.readException(); 
+                } finally { 
+                    _reply.recycle(); 
+                    _data.recycle(); 
+                } 
+            }
+
+            @Override 
+            public boolean getPhone(java.lang.String name) throws android.os.RemoteException { 
+                android.os.Parcel _data = android.os.Parcel.obtain(); 
+                android.os.Parcel _reply = android.os.Parcel. obtain(); 
+                boolean _result; 
+                try { 
+                    _data.writeInterfaceToken(DESCRIPTOR); 
+                    _data.writeString(name); 
+                    mRemote.transact(Stub.TRANSACTION_getPhone, _data, _reply, 0); 
+                    _reply.readException(); 
+                    _result = (0 != _reply.readInt()); 
+                } finally { 
+                    _reply.recycle(); 
+                    _data.recycle(); 
+                } 
+                return _result; 
+            }
+
+            @Override 
+            public int getPid() throws android.os.RemoteException { 
+                android.os.Parcel _data = android.os.Parcel.obtain(); 
+                android.os.Parcel _reply = android.os.Parcel.obtain(); 
+                int _result ; 
+                try { 
+                    _data.writeInterfaceToken(DESCRIPTOR); 
+                    mRemote.transact(Stub.TRANSACTION_getPid, _data, _reply, 0); 
+                    _reply.readException(); 
+                    _result = _reply.readInt(); 
+                } finally { 
+                    _reply.recycle(); 
+                    _data. recycle(); 
+                } 
+                return _result; 
+            } 
+        }
+
+        static final int TRANSACTION_addPhone = (android.os.IBinder.FIRST_CALL_TRANSACTION + 0); 
+        static final int TRANSACTION_getPhone = (android.os.IBinder.FIRST_CALL_TRANSACTION + 1); 
+        static final int TRANSACTION_getPid = (android.os.IBinder.FIRST_CALL_TRANSACTION + 2) ; 
+    }
+
+    public void addPhone(java.lang.String name) throws android.os.RemoteException;
+
+    public boolean getPhone(java.lang.String name) throws android.os.RemoteException;
+
+    public int getPid() throws android.os.RemoteException; 
+}
